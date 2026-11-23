@@ -9708,6 +9708,20 @@ class TestMossTTSNanoText(unittest.TestCase):
         self.assertGreaterEqual(len(chunks), 2)
         self.assertTrue(all(chunk.strip() for chunk in chunks))
 
+    def test_token_budget_fallback_keeps_numbers_whole(self):
+        from mlx_audio.tts.models.moss_tts_nano.text import (
+            split_text_into_best_sentences,
+        )
+
+        tokenizer = MossFakeTokenizer()
+        for number in ("3.14", "1,000", "9:30"):
+            with self.subTest(number=number):
+                # The 11-character prefix ends at the separator inside the number.
+                chunks = split_text_into_best_sentences(
+                    tokenizer, f"It costs {number} now.", max_tokens=11
+                )
+                self.assertEqual(chunks, ["It costs", f"{number} now."])
+
     def test_split_text_keeps_numbers_whole(self):
         from mlx_audio.tts.models.moss_tts_nano.text import (
             CLAUSE_SPLIT_PUNCTUATION,
