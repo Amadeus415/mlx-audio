@@ -9722,6 +9722,47 @@ class TestMossTTSNanoText(unittest.TestCase):
         self.assertGreaterEqual(len(chunks), 2)
         self.assertTrue(all(chunk.strip() for chunk in chunks))
 
+    def test_token_budget_fallback_keeps_numbers_whole(self):
+        from mlx_audio.tts.models.moss_tts_nano.text import (
+            split_text_into_best_sentences,
+        )
+
+        tokenizer = MossFakeTokenizer()
+        for number in ("3.14", "1,000", "9:30"):
+            with self.subTest(number=number):
+                # The 11-character prefix ends at the separator inside the number.
+                chunks = split_text_into_best_sentences(
+                    tokenizer, f"It costs {number} now.", max_tokens=11
+                )
+                self.assertEqual(chunks, ["It costs", f"{number} now."])
+
+    def test_split_text_keeps_numbers_whole(self):
+        from mlx_audio.tts.models.moss_tts_nano.text import (
+            CLAUSE_SPLIT_PUNCTUATION,
+            SENTENCE_END_PUNCTUATION,
+            split_text_by_punctuation,
+        )
+
+        self.assertEqual(
+            split_text_by_punctuation(
+                "It costs 3.14 dollars. Version 2.0 shipped.",
+                SENTENCE_END_PUNCTUATION,
+            ),
+            ["It costs 3.14 dollars.", "Version 2.0 shipped."],
+        )
+        self.assertEqual(
+            split_text_by_punctuation(
+                "We sold 1,000 units at 10:30, then left", CLAUSE_SPLIT_PUNCTUATION
+            ),
+            ["We sold 1,000 units at 10:30,", "then left"],
+        )
+        self.assertEqual(
+            split_text_by_punctuation(
+                "I scored 3. 14 is next.", SENTENCE_END_PUNCTUATION
+            ),
+            ["I scored 3.", "14 is next."],
+        )
+
 
 class TestMossTTSNanoSampling(unittest.TestCase):
     def test_top_k_masks_low_scores(self):
