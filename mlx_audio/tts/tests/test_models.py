@@ -1056,6 +1056,17 @@ class TestOuteTTSModel(unittest.TestCase):
         logits = model(input_ids)
         self.assertEqual(logits.shape, (2, 9, config.vocab_size))
 
+    @patch("transformers.AutoTokenizer")
+    def test_chunk_text_long_first_sentence(self, mock_tokenizer):
+        """A first sentence over the word limit does not add an empty chunk."""
+        from mlx_audio.tts.models.outetts.outetts import Model
+
+        long_sentence = " ".join(["word"] * 31)
+        chunks = Model.chunk_text(None, f"{long_sentence}. Short one.", max_words=30)
+
+        self.assertEqual(chunks, [long_sentence, "Short one"])
+        self.assertEqual(Model.chunk_text(None, long_sentence), [long_sentence])
+
 
 class TestDiaModel(unittest.TestCase):
     @property

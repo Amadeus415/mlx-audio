@@ -94,7 +94,7 @@ class Model(nn.Module):
 
         for sentence in sentences:
             words = sentence.split()
-            if current_length + len(words) > max_words:
+            if current_chunk and current_length + len(words) > max_words:
                 chunks.append(" ".join(current_chunk))
                 current_chunk = []
                 current_length = 0
