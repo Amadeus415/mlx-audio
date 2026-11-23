@@ -1040,6 +1040,46 @@ class TestOuteTTSModel(unittest.TestCase):
         # Check that model was created
         self.assertIsInstance(model, Model)
 
+    def test_load_uses_checkpoint_tokenizer(self):
+        """Loading a checkpoint uses the tokenizer stored with it."""
+        from mlx_audio.tts.models.outetts import outetts
+        from mlx_audio.tts.utils import load_model
+
+        config = {
+            **self._default_config,
+            "head_dim": 8,
+            "hidden_size": 16,
+            "intermediate_size": 32,
+            "num_attention_heads": 2,
+            "num_hidden_layers": 1,
+            "num_key_value_heads": 1,
+            "vocab_size": 32,
+        }
+
+        with (
+            TemporaryDirectory() as tmp,
+            patch.object(outetts, "AutoTokenizer") as mock_tokenizer,
+        ):
+            mock_tokenizer.from_pretrained.side_effect = str
+            model_path = Path(tmp) / "OuteTTS-test"
+            model_path.mkdir()
+            (model_path / "config.json").write_text(json.dumps(config))
+            outetts.Model(outetts.ModelConfig(**config)).save_weights(
+                str(model_path / "model.safetensors")
+            )
+
+            model = load_model(str(model_path))
+            self.assertEqual(model.tokenizer, "OuteAI/Llama-OuteTTS-1.0-1B")
+
+            (model_path / "tokenizer.json").write_text("{}")
+            model = load_model(str(model_path))
+            self.assertEqual(model.tokenizer, str(model_path))
+
+            config["tokenizer_name"] = "custom/tokenizer"
+            (model_path / "config.json").write_text(json.dumps(config))
+            model = load_model(str(model_path))
+            self.assertEqual(model.tokenizer, "custom/tokenizer")
+
     @patch("transformers.AutoTokenizer")
     def test_generate(self, mock_tokenizer):
         """Test generate method."""

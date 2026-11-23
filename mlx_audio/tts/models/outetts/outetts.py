@@ -28,15 +28,21 @@ from .prompt_processor import PromptProcessor
 
 @dataclass
 class ModelConfig(LlamaModelConfig, Qwen2ModelConfig, Qwen3ModelConfig):
-    tokenizer_name: str = "OuteAI/Llama-OuteTTS-1.0-1B"
+    tokenizer_name: Optional[str] = None
     sample_rate: int = 24000
+    model_path: Optional[str] = None
 
 
 class Model(nn.Module):
     def __init__(self, config: ModelConfig, **kwargs):
         super().__init__()
         self.config = config
-        self.tokenizer = AutoTokenizer.from_pretrained(config.tokenizer_name)
+        tokenizer_name = config.tokenizer_name
+        if tokenizer_name is None:
+            tokenizer_name = "OuteAI/Llama-OuteTTS-1.0-1B"
+            if config.model_path and Path(config.model_path, "tokenizer.json").exists():
+                tokenizer_name = config.model_path
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.model = self._initialize_model(config, **kwargs)
 
     def _initialize_model(self, config: ModelConfig, **kwargs) -> nn.Module:
